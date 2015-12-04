@@ -99,6 +99,10 @@ if (!function_exists('mysql_connect')) {
                 return $rs->fetch(PDO::FETCH_BOTH);
         }
     }
+    
+    function mysql_close() {
+        
+    }
 
     /**
      * PRIVATE
@@ -129,4 +133,39 @@ X mysql_error()
 X mysql_query($query)
 X mysql_fetch_row() 
 
+TODO:
+ * mysql_close
+ * mysql_errno ([ resource $link_identifier = NULL ] 
+ * mysql_fetch_object ( resource $result [, string $class_name [, array $params ]] ))
+ * mysql_free_result ( resource $result )
+ * mysql_list_dbs ([ resource $link_identifier = NULL ] )
+ * mysql_num_fields ( resource $result )
+ * mysql_pconnect ([ string $server = ini_get("mysql.default_host") [, string $username = ini_get("mysql.default_user") [, string $password = ini_get("mysql.default_password") [, int $client_flags = 0 ]]]] )
+ * 
+ * 
+ * ?? mysql_get_client_info ( void )
+ * ?? mysql_get_host_info ([ resource $link_identifier = NULL ] )
+ * ?? mysql_get_proto_info ([ resource $link_identifier = NULL ] )
+ * ?? mysql_get_server_info ([ resource $link_identifier = NULL ] )
+ * ?? mysql_info ([ resource $link_identifier = NULL ] )
+ * ?? mysql_list_fields ( string $database_name , string $table_name [, resource $link_identifier = NULL ] )
+ * ?? mysql_ping ([ resource $link_identifier = NULL ] )
+ * ?? mysql_result ( resource $result , int $row [, mixed $field = 0 ] )
+ * ?? mysql_stat ([ resource $link_identifier = NULL ] )
+ * ?? mysql_tablename ( resource $result , int $i )
+ * ?? mysql_unbuffered_query ( string $query [, resource $link_identifier = NULL ] )
+ * 
+ * WILL NOT DO:
+ * mysql_client_encoding
+ * bool mysql_create_db ( string $database_name [, resource $link_identifier = NULL ] )
+ * mysql_data_seek ( resource $result , int $row_number )
+ * mysql_db_name ( resource $result , int $row [, mixed $field = NULL ] )
+ * mysql_db_query ( string $database , string $query [, resource $link_identifier = NULL ] )
+ * mysql_drop_db ( string $database_name [, resource $link_identifier = NULL ] )
+ * mysql_escape_string ( string $unescaped_string )
+ * mysql_fetch_field ( resource $result [, int $field_offset = 0 ] )
+ * mysql_fetch_lengths ( resource $result )
+ * mysql_field_flags ( resource $result , int $field_offset )
+ * mysql_field_*
+ * mysql_list_processes ([ resource $link_identifier = NULL ] )
  */

@@ -6,15 +6,14 @@
  * and open the template in the editor.
  */
 
-require "../mysql_continued.php";
-
+require '../vendor/autoload.php';
 
 /**
  * Description of mysqlContinued
  *
  * @author ronald
  */
-class mysqlContinued extends PHPUnit_Framework_TestCase {
+class MysqlContinuedTest extends PHPUnit_Framework_TestCase {
     const HOSTNAME = 'localhost';
     const USERNAME = '';
     const PASSWORD = '';

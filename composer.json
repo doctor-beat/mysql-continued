@@ -1,0 +1,13 @@
+{
+    "name": "doctorbeat/mysql-continued",
+    "description": "a dropin replacement for the discontinued mysql_* functions",
+    "authors": [
+        {
+            "name": "doctor-beat"
+        }
+    ],
+    "require": {},
+    "autoload": {
+        "files": ["src/MysqlContinued.php"]
+    }
+}
