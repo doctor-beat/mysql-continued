@@ -11,7 +11,7 @@
 
 if (!function_exists('mysql_connect')) {
     $pdo_conn = null;       /* @var $pdo_conn PDO */
-    $pdo_error = null;      /* @var $pro_error String */
+    $pdo_error = array('0000', '', '');      /* @var $pdo_error array() */
     $pdo_last_stmt = null;   /* @var $pdo_stmt PDOStatement */
 
     define('MYSQL_ASSOC', 1);
@@ -22,12 +22,13 @@ if (!function_exists('mysql_connect')) {
     }
 
     function mysql_connect($host = 'localhost', $user = '', $pass = '') {
-        global $pdo_conn, $pdo_error;
+        global $pdo_conn, $pdo_last_stmt;
         //$pdo_conn = new PDO('sqlite:host=' . $host, $user, $pass);
         $pdo_conn = new PDO('sqlite:foo.db');
 //                $pdo_conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
         mysql_store_error($pdo_conn);
+        $pdo_last_stmt = null;
         return $pdo_conn;
     }
 
@@ -52,7 +53,11 @@ if (!function_exists('mysql_connect')) {
 
     function mysql_error() {
         global $pdo_error;
-        return $pdo_error;
+        return $pdo_error[2];
+    }
+    function mysql_errno() {
+        global $pdo_error;
+        return (integer) $pdo_error[0];
     }
 
     function mysql_insert_id() {
@@ -100,8 +105,16 @@ if (!function_exists('mysql_connect')) {
         }
     }
     
+    function mysql_fetch_object($rs, $class_name = "stdClass", $params = array()) {
+        return $rs->fetchObject($class_name, $params);
+    }
+    
     function mysql_close() {
-        
+        global $pdo_conn, $pdo_last_stmt;
+        $pdo_conn = null;
+        $pdo_last_stmt = null;
+        mysql_store_error(true);
+        return true;
     }
 
     /**
@@ -112,7 +125,7 @@ if (!function_exists('mysql_connect')) {
      */
     function mysql_store_error($rst) {
         global $pdo_conn, $pdo_error;
-        $pdo_error = $rst ? null : $pdo_conn->errorInfo()[2];
+        $pdo_error = $rst ? array('0000', '', '') : $pdo_conn->errorInfo();
     }
 
 }
@@ -134,8 +147,8 @@ X mysql_query($query)
 X mysql_fetch_row() 
 
 TODO:
- * mysql_close
- * mysql_errno ([ resource $link_identifier = NULL ] 
+ * X mysql_close
+ * X mysql_errno ([ resource $link_identifier = NULL ] 
  * mysql_fetch_object ( resource $result [, string $class_name [, array $params ]] ))
  * mysql_free_result ( resource $result )
  * mysql_list_dbs ([ resource $link_identifier = NULL ] )

@@ -6,7 +6,7 @@
  * and open the template in the editor.
  */
 
-require '../vendor/autoload.php';
+require (__DIR__ . '/../vendor/autoload.php');
 
 /**
  * Description of mysqlContinued
@@ -24,6 +24,10 @@ class MysqlContinuedTest extends PHPUnit_Framework_TestCase {
     private static $pdo;
 
     public static function setUpBeforeClass(){
+        if (!function_exists('mysql_continued')) {
+            throw new Exception("MysqlContinued not loaded, maybe your normal mysql-lib is still enabled?");
+        }
+
         //self::$pdo = new PDO(sprintf('sqlite:memory:host=%s;dbname=%s;charset=UTF8', self::HOSTNAME, self::DATABASE), 
         self::$pdo = new PDO('sqlite:foo.db',
             self::USERNAME, 
@@ -50,26 +54,35 @@ class MysqlContinuedTest extends PHPUnit_Framework_TestCase {
         parent::tearDown();
         $this->clearTable();
     }
-    
-    public function testLibraryIsLoaded() {
-        $this->assertTrue(function_exists('mysql_continued'));
-    }
     public function testCanConnect() {
         global $pdo_conn;
 
+        //connection done in setUp
+        
         $this->assertNotNull($this->dbh);
         $this->assertSame($this->dbh, $pdo_conn);
-        $this->assertNull(mysql_error());
+        echo mysql_errno();
+        $this->assertSame(0, mysql_errno());
+        $this->assertSame('', mysql_error());
+    }
+    public function testCanCloseConnection() {
+        global $pdo_conn;
+
+        mysql_close();
+        
+        $this->assertNull($pdo_conn);
+        $this->assertSame('', mysql_error());
+        $this->assertSame(0, mysql_errno());
     }
     public function testCanSelectDb() {
         $bool = mysql_select_db(self::DATABASE);
         $this->assertTrue($bool);        
-        $this_>assertNull(mysql_error());
+        $this_>assertSame('', mysql_error());
     }
     public function testCanSetCharset() {
         $bool = mysql_set_charset('utf8');
         $this->assertTrue($bool);        
-        $this_>assertNull(mysql_error());
+        $this_>assertSame('', mysql_error());
     }
     public function testRealEscapeData() {
         $escaped = mysql_real_escape_string("abc 'stu");
@@ -78,15 +91,17 @@ class MysqlContinuedTest extends PHPUnit_Framework_TestCase {
     public function testCanDetectError() {
         $rst = mysql_query("select 1 from dual");
         $this->assertFalse($rst);
+        $this->assertSame(0, mysql_errno());
         $this->assertSame("no such table: dual", mysql_error());
 
         $rst = mysql_query("selectx 1 from dual");
         $this->assertFalse($rst);
+        $this->assertSame(0, mysql_errno());
         $this->assertSame('near "selectx": syntax error', mysql_error());
     }
     public function testCanInsert() {
         $rst = mysql_query(sprintf("insert into %s values(null, 'insert')", self::TABLENAME));
-        $this->assertNull(mysql_error());
+        $this->assertSame('', mysql_error());
         $this->assertTrue((boolean) $rst);
         $this->assertSame(1, mysql_affected_rows());
     }
@@ -95,7 +110,7 @@ class MysqlContinuedTest extends PHPUnit_Framework_TestCase {
         $lastId = mysql_insert_id();
         
         $rst2 = mysql_query(sprintf("update %s set col1 = 'my Value' where id  = %s", self::TABLENAME, $lastId));
-        $this->assertNull(mysql_error());
+        $this->assertSame('', mysql_error());
         $this->assertTrue((boolean) $rst2);
         $this->assertSame(1, mysql_affected_rows());
 
@@ -108,13 +123,13 @@ class MysqlContinuedTest extends PHPUnit_Framework_TestCase {
         $this->insertRowsAndSelect(4);
         
         $rst = mysql_query(sprintf("delete from %s", self::TABLENAME));
-        $this->assertNull(mysql_error());
+        $this->assertSame('', mysql_error());
         $this->assertTrue((boolean) $rst);
         $this->assertSame(4, mysql_affected_rows());
     }
     public function testCanUpdateZeroRows() {
         $rst = mysql_query(sprintf("update %s set col1 = 'my Value' where 1=0", self::TABLENAME));
-        $this->assertNull(mysql_error());
+        $this->assertSame('', mysql_error());
         $this->assertTrue((boolean) $rst);
         $this->assertSame(0, mysql_affected_rows());
     }
@@ -158,6 +173,14 @@ class MysqlContinuedTest extends PHPUnit_Framework_TestCase {
         $this->assertSame('Row 1', $row[1]);
         $this->assertArrayNotHasKey('col1', $row);
     }
+    public function testCanFetchObject() {
+        $stmt = $this->insertRowsAndSelect(2);
+        
+        $row = mysql_fetch_object($stmt);
+        $this->assertSame('stdClass', get_class($row));
+        $this->assertSame('Row 1', $row->col1);
+        $this->assertGreaterThanOrEqual(1, $row->id);
+    }
     public function testCanReturnLastId() {
         $this->insertRowsAndSelect();
 
@@ -174,7 +197,7 @@ class MysqlContinuedTest extends PHPUnit_Framework_TestCase {
         $testValue = 'Ïnterñátiön€l';
         
         $rst = mysql_query(sprintf("insert into %s values(null, '%s')", self::TABLENAME, $testValue));
-        $this->assertNull(mysql_error());
+        $this->assertSame('', mysql_error());
         $this->assertTrue((boolean) $rst);
         $this->assertSame(1, mysql_affected_rows());
         
@@ -195,7 +218,10 @@ class MysqlContinuedTest extends PHPUnit_Framework_TestCase {
         return mysql_query(sprintf("select * from %s", self::TABLENAME));
     }
     private function clearTable() {
-        mysql_query(sprintf("delete from %s", self::TABLENAME));
+        global $pdo_conn;
+        if ($pdo_conn) {
+            $pdo_conn->query(sprintf("delete from %s", self::TABLENAME));
+        }
     }
     
     
