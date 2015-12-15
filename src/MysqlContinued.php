@@ -109,6 +109,18 @@ if (!function_exists('mysql_connect')) {
         return $rs->fetchObject($class_name, $params);
     }
     
+    function mysql_free_result(&$rs) {
+        $rs = null;
+        return true;
+    }
+    
+    function mysql_list_dbs () {
+        return mysql_query("SHOW DATABASES");
+    }
+    
+    function mysql_num_fields ($result ){
+        return $result->columnCount();
+    }
     function mysql_close() {
         global $pdo_conn, $pdo_last_stmt;
         $pdo_conn = null;
@@ -149,9 +161,9 @@ X mysql_fetch_row()
 TODO:
  * X mysql_close
  * X mysql_errno ([ resource $link_identifier = NULL ] 
- * mysql_fetch_object ( resource $result [, string $class_name [, array $params ]] ))
- * mysql_free_result ( resource $result )
- * mysql_list_dbs ([ resource $link_identifier = NULL ] )
+ * X mysql_fetch_object ( resource $result [, string $class_name [, array $params ]] ))
+ * X mysql_free_result ( resource $result )
+ * X mysql_list_dbs ([ resource $link_identifier = NULL ] )
  * mysql_num_fields ( resource $result )
  * mysql_pconnect ([ string $server = ini_get("mysql.default_host") [, string $username = ini_get("mysql.default_user") [, string $password = ini_get("mysql.default_password") [, int $client_flags = 0 ]]]] )
  * 

@@ -6,7 +6,9 @@
             "name": "doctor-beat"
         }
     ],
-    "require": {},
+    "require": {
+        "ext-pdo_mysql" : "*"
+    },
     "autoload": {
         "files": ["src/MysqlContinued.php"]
     }
