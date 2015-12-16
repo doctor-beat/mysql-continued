@@ -21,15 +21,23 @@ if (!function_exists('mysql_connect')) {
     function mysql_continued() {
     }
 
-    function mysql_connect($host = 'localhost', $user = '', $pass = '') {
+    function mysql_connect($server = null, $username = null, $password = null, $persistent = false) {
         global $pdo_conn, $pdo_last_stmt;
+        
+        if ($server === null)   {$server = ini_get("mysql.default_host");}
+        if ($username === null) {$username = ini_get("mysql.default_user");}
+        if ($password === null) {$password = ini_get("mysql.default_password");}
+       
         //$pdo_conn = new PDO('sqlite:host=' . $host, $user, $pass);
-        $pdo_conn = new PDO('sqlite:foo.db');
-//                $pdo_conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+        $pdo_conn = new PDO('sqlite:foo.db', $username, $password, array(PDO::ATTR_PERSISTENT => $persistent));
 
         mysql_store_error($pdo_conn);
         $pdo_last_stmt = null;
         return $pdo_conn;
+    }
+
+    function mysql_pconnect($server = null, $username = null, $password = null) {
+        return mysql_connect($server, $username, $password, true);
     }
 
     function mysql_select_db($dbname) {
@@ -164,7 +172,7 @@ TODO:
  * X mysql_fetch_object ( resource $result [, string $class_name [, array $params ]] ))
  * X mysql_free_result ( resource $result )
  * X mysql_list_dbs ([ resource $link_identifier = NULL ] )
- * mysql_num_fields ( resource $result )
+ * X mysql_num_fields ( resource $result )
  * mysql_pconnect ([ string $server = ini_get("mysql.default_host") [, string $username = ini_get("mysql.default_user") [, string $password = ini_get("mysql.default_password") [, int $client_flags = 0 ]]]] )
  * 
  * 

@@ -15,43 +15,39 @@ require "config.test.php";
  * @author ronald
  */
 class MysqlContinuedTest extends PHPUnit_Framework_TestCase {
-    private $config;
-/*    private $HOSTNAME = 'localhost';
-    private $USERNAME = '';
-    private $PASSWORD = '';
-    private $DATABASE = 'abc';
-    private $TABLENAME = 'v70lgvf2p3b5';
-*/    
+    private static $config;
     private $dbh;
     private static $pdo;
 
     public static function setUpBeforeClass(){
+        global $CONFIG;
+
         if (!function_exists('mysql_continued')) {
             throw new Exception("MysqlContinued not loaded, maybe your normal mysql-lib is still enabled?");
         }
 
-        //self::$pdo = new PDO(sprintf('sqlite:memory:host=%s;dbname=%s;charset=UTF8', self::HOSTNAME, self::DATABASE), 
+        self::$config = (object) $CONFIG;        
+
+        //self::$pdo = new PDO(sprintf('sqlite:memory:host=%s;dbname=%s;charset=UTF8', self::$config->HOSTNAME, self::$config->DATABASE), 
         self::$pdo = new PDO('sqlite:foo.db',
-            $this->config->USERNAME, 
-            $this->config->PASSWORD,
+            self::$config->USERNAME, 
+            self::$config->PASSWORD,
             array(PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,));
 
         
         //create a test table
-        self::$pdo->exec(sprintf("create table %s  (id INTEGER PRIMARY KEY AUTOINCREMENT, col1 string(200));", $this->config->TABLENAME, $this->config->TABLENAME));
+        self::$pdo->exec(sprintf("create table %s  (id INTEGER PRIMARY KEY AUTOINCREMENT, col1 string(200));", self::$config->TABLENAME, self::$config->TABLENAME));
         
     }
     
     public static function tearDownAfterClass() {
-        self::$pdo->exec(sprintf("drop table if exists %s;", $this->config->TABLENAME));        
+        self::$pdo->exec(sprintf("drop table if exists %s;", self::$config->TABLENAME));        
     }
     
     public function setUp() {
-        global $CONFIG;
         parent::setUp();
-        $this->config = $CONFIG;        
-        $this->dbh = mysql_connect($this->config->HOSTNAME, $this->config->USERNAME, $this->config->PASSWORD);
-        mysql_select_db($this->config->DATABASE);
+        $this->dbh = mysql_connect(self::$config->HOSTNAME, self::$config->USERNAME, self::$config->PASSWORD);
+        mysql_select_db(self::$config->DATABASE);
         mysql_set_charset('utf8');
     }
     public function tearDown() {
@@ -61,11 +57,36 @@ class MysqlContinuedTest extends PHPUnit_Framework_TestCase {
     public function testCanConnect() {
         global $pdo_conn;
 
-        //connection done in setUp
-        
         $this->assertNotNull($this->dbh);
         $this->assertSame($this->dbh, $pdo_conn);
-        echo mysql_errno();
+        
+        $conn = mysql_connect(self::$config->HOSTNAME, self::$config->USERNAME, self::$config->PASSWORD);
+        
+        $this->assertNotNull($conn);
+        $this->assertSame($pdo_conn, $conn);
+        $this->assertNotSame($this->dbh, $conn);
+        $this->assertSame(0, mysql_errno());
+        $this->assertSame('', mysql_error());
+    }
+    public function testCanConnectUsingIniValues() {
+        global $pdo_conn;
+        
+        ini_set("mysql.default_host", self::$config->HOSTNAME);
+        ini_set("mysql.default_user", self::$config->USERNAME);
+        ini_set("mysql.default_password", self::$config->PASSWORD);
+        
+        $conn = mysql_connect();  /*@var $conn PDO */
+        
+        $this->assertNotNull($conn);
+        $this->assertSame($pdo_conn, $conn);
+        $this->assertSame(0, mysql_errno());
+        $this->assertSame('', mysql_error());
+    }
+    public function testCanConnectPersistent() {
+        $conn = mysql_pconnect(self::$config->HOSTNAME, self::$config->USERNAME, self::$config->PASSWORD);  /*@var $conn PDO */
+        
+        $this->assertNotNull($conn);
+        $this->assertSame(true, $conn->getAttribute(PDO::ATTR_PERSISTENT));
         $this->assertSame(0, mysql_errno());
         $this->assertSame('', mysql_error());
     }
@@ -79,7 +100,7 @@ class MysqlContinuedTest extends PHPUnit_Framework_TestCase {
         $this->assertSame(0, mysql_errno());
     }
     public function testCanSelectDb() {
-        $bool = mysql_select_db($this->config->DATABASE);
+        $bool = mysql_select_db(self::$config->DATABASE);
         $this->assertTrue($bool);        
         $this_>assertSame('', mysql_error());
     }
@@ -104,7 +125,7 @@ class MysqlContinuedTest extends PHPUnit_Framework_TestCase {
         $this->assertSame('near "selectx": syntax error', mysql_error());
     }
     public function testCanInsert() {
-        $rst = mysql_query(sprintf("insert into %s values(null, 'insert')", $this->config->TABLENAME));
+        $rst = mysql_query(sprintf("insert into %s values(null, 'insert')", self::$config->TABLENAME));
         $this->assertSame('', mysql_error());
         $this->assertTrue((boolean) $rst);
         $this->assertSame(1, mysql_affected_rows());
@@ -113,12 +134,12 @@ class MysqlContinuedTest extends PHPUnit_Framework_TestCase {
         $this->insertRowsAndSelect(4);
         $lastId = mysql_insert_id();
         
-        $rst2 = mysql_query(sprintf("update %s set col1 = 'my Value' where id  = %s", $this->config->TABLENAME, $lastId));
+        $rst2 = mysql_query(sprintf("update %s set col1 = 'my Value' where id  = %s", self::$config->TABLENAME, $lastId));
         $this->assertSame('', mysql_error());
         $this->assertTrue((boolean) $rst2);
         $this->assertSame(1, mysql_affected_rows());
 
-        $rst3 = mysql_query(sprintf("select * from %s where id  = %s", $this->config->TABLENAME, $lastId));
+        $rst3 = mysql_query(sprintf("select * from %s where id  = %s", self::$config->TABLENAME, $lastId));
 //        $this->assertEquals(1, mysql_num_rows($rst3));
         $row3 = mysql_fetch_assoc($rst3);
         $this->assertSame('my Value', $row3['col1']);
@@ -126,13 +147,13 @@ class MysqlContinuedTest extends PHPUnit_Framework_TestCase {
     public function testCanDelete() {
         $this->insertRowsAndSelect(4);
         
-        $rst = mysql_query(sprintf("delete from %s", $this->config->TABLENAME));
+        $rst = mysql_query(sprintf("delete from %s", self::$config->TABLENAME));
         $this->assertSame('', mysql_error());
         $this->assertTrue((boolean) $rst);
         $this->assertSame(4, mysql_affected_rows());
     }
     public function testCanUpdateZeroRows() {
-        $rst = mysql_query(sprintf("update %s set col1 = 'my Value' where 1=0", $this->config->TABLENAME));
+        $rst = mysql_query(sprintf("update %s set col1 = 'my Value' where 1=0", self::$config->TABLENAME));
         $this->assertSame('', mysql_error());
         $this->assertTrue((boolean) $rst);
         $this->assertSame(0, mysql_affected_rows());
@@ -141,7 +162,7 @@ class MysqlContinuedTest extends PHPUnit_Framework_TestCase {
         $rowCnt = 4;
         $this->insertRowsAndSelect($rowCnt);
         
-        $rst = mysql_query(sprintf("select * from %s  order by id", $this->config->TABLENAME));
+        $rst = mysql_query(sprintf("select * from %s  order by id", self::$config->TABLENAME));
 //        $this->assertEquals($rowCnt, mysql_num_rows($rst));
         $cnt = 0;
         while($row = mysql_fetch_assoc($rst)) {
@@ -200,11 +221,11 @@ class MysqlContinuedTest extends PHPUnit_Framework_TestCase {
 
         $found = null;
         while ($found == null && $row = mysql_fetch_object($result)) {
-            if ($row->Database == $this->config->DATABASE) {
+            if ($row->Database == self::$config->DATABASE) {
                 $found = $row->Database;
             }
         }
-        $this->assertSame($this->config->DATABASE, $found);
+        $this->assertSame(self::$config->DATABASE, $found);
     }
     public function testCanCountColumns() {
         $stmt = $this->insertRowsAndSelect(2);
@@ -228,12 +249,12 @@ class MysqlContinuedTest extends PHPUnit_Framework_TestCase {
     public function testCanHandleUtf8() {
         $testValue = 'Ïnterñátiön€l';
         
-        $rst = mysql_query(sprintf("insert into %s values(null, '%s')", $this->config->TABLENAME, $testValue));
+        $rst = mysql_query(sprintf("insert into %s values(null, '%s')", self::$config->TABLENAME, $testValue));
         $this->assertSame('', mysql_error());
         $this->assertTrue((boolean) $rst);
         $this->assertSame(1, mysql_affected_rows());
         
-        $rst = mysql_query(sprintf("select * from %s order by id", $this->config->TABLENAME));
+        $rst = mysql_query(sprintf("select * from %s order by id", self::$config->TABLENAME));
         $row = mysql_fetch_assoc($rst);
         $this->assertSame($testValue, $row['col1']);
     }
@@ -245,14 +266,14 @@ class MysqlContinuedTest extends PHPUnit_Framework_TestCase {
      */
     private function insertRowsAndSelect($cnt = 1) {
         for ($i = 0; $i < $cnt; $i++) {
-            $rst = mysql_query(sprintf("insert into %s values(null, 'Row %s')", $this->config->TABLENAME, $i+1));
+            $rst = mysql_query(sprintf("insert into %s values(null, 'Row %s')", self::$config->TABLENAME, $i+1));
         }
-        return mysql_query(sprintf("select * from %s", $this->config->TABLENAME));
+        return mysql_query(sprintf("select * from %s", self::$config->TABLENAME));
     }
     private function clearTable() {
         global $pdo_conn;
         if ($pdo_conn) {
-            $pdo_conn->query(sprintf("delete from %s", $this->config->TABLENAME));
+            $pdo_conn->query(sprintf("delete from %s", self::$config->TABLENAME));
         }
     }
     
