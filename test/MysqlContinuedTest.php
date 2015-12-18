@@ -53,6 +53,7 @@ class MysqlContinuedTest extends PHPUnit_Framework_TestCase {
     public function tearDown() {
         parent::tearDown();
         $this->clearTable();
+        mysql_close();
     }
     public function testCanConnect() {
         global $pdo_conn;
@@ -82,6 +83,13 @@ class MysqlContinuedTest extends PHPUnit_Framework_TestCase {
         $this->assertSame(0, mysql_errno());
         $this->assertSame('', mysql_error());
     }
+    public function testCanDetectFailedConnect() {
+        $conn = mysql_connect(self::$config->HOSTNAME, self::$config->USERNAME, "INVALID PASSWD");
+        
+        $this->assertFalse($conn);
+        $this->assertSame(123, mysql_errno());
+        $this->assertSame("Invalid password", mysql_error());
+    }
     public function testCanConnectPersistent() {
         $conn = mysql_pconnect(self::$config->HOSTNAME, self::$config->USERNAME, self::$config->PASSWORD);  /*@var $conn PDO */
         
@@ -102,12 +110,22 @@ class MysqlContinuedTest extends PHPUnit_Framework_TestCase {
     public function testCanSelectDb() {
         $bool = mysql_select_db(self::$config->DATABASE);
         $this->assertTrue($bool);        
-        $this_>assertSame('', mysql_error());
+        $this->assertSame('', mysql_error());
+    }
+    public function testCanSelectDbFailed() {
+        $bool = mysql_select_db("DOESNOTEXISTS");
+        $this->assertFalse($bool);        
+        $this->assertSame('Does not exists', mysql_error());
     }
     public function testCanSetCharset() {
         $bool = mysql_set_charset('utf8');
         $this->assertTrue($bool);        
-        $this_>assertSame('', mysql_error());
+        $this->assertSame('', mysql_error());
+    }
+    public function testCanSetCharsetFailed() {
+        $bool = mysql_set_charset('nonexisting');
+        $this->assertFalse($bool);        
+        $this->assertSame('unknown charset', mysql_error());
     }
     public function testRealEscapeData() {
         $escaped = mysql_real_escape_string("abc 'stu");
@@ -245,6 +263,15 @@ class MysqlContinuedTest extends PHPUnit_Framework_TestCase {
         $lastId2 = mysql_insert_id();
         $this->assertTrue($lastId < $lastId2);
     }
+    public function testCanNotReturnLastIdWhenNoInsert() {
+        $lastId = mysql_insert_id();
+        $this->assertSame(0, (int) $lastId);
+    }
+    public function testCanNotReturnLastIdWhenNotConnected() {
+        mysql_close();
+        $lastId = mysql_insert_id();
+        $this->assertFalse($lastId);
+    }
     
     public function testCanHandleUtf8() {
         $testValue = 'Ïnterñátiön€l';
@@ -257,6 +284,27 @@ class MysqlContinuedTest extends PHPUnit_Framework_TestCase {
         $rst = mysql_query(sprintf("select * from %s order by id", self::$config->TABLENAME));
         $row = mysql_fetch_assoc($rst);
         $this->assertSame($testValue, $row['col1']);
+    }
+    
+    public function testCanGetClientInfo() {
+        $rst = mysql_get_client_info();
+        $this->assertNotNull($rst);
+    }
+
+    public function testCanHandleNumRowsError() {
+        $result = $this->insertRowsAndSelect();
+        mysql_close();
+        $rst = mysql_num_rows($result);
+        $this->assertFalse($rst);
+    }
+
+    public function testCanHandleAffectedRowsError() {
+        $rst = mysql_affected_rows();
+        $this->assertSame(-1, (int) $rst);
+
+        mysql_query(sprintf("insert into DOESNOTEXISTS values(null, '%s')", $testValue));
+        $rst = mysql_affected_rows();
+        $this->assertSame(-1, (int) $rst);
     }
     
     
@@ -280,14 +328,6 @@ class MysqlContinuedTest extends PHPUnit_Framework_TestCase {
     
  /*TODO: 
   * enable the asserts for row count
-  * test error conditions:
-    - invalid query
-  * connect failed
-  * select db failed
-  * invalid charset
-  * last insert id not found
-  * num rows emtpy
-  * affected rows empty
   * 
   */
     

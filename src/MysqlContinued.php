@@ -70,20 +70,20 @@ if (!function_exists('mysql_connect')) {
 
     function mysql_insert_id() {
         global $pdo_conn, $pdo_error;
-        $rst = $pdo_conn ? $pdo_conn->lastInsertId() : null;
+        $rst = $pdo_conn ? $pdo_conn->lastInsertId() : false;
         mysql_store_error($rst);
         return $rst;
     }
 
     function mysql_num_rows(PDOStatement $stmt) {
         global $pdo_conn;
-        $cnt = $pdo_conn->query("SELECT FOUND_ROWS()");
-        return (integer) ($cnt ? $cnt->fetchColumn() : 0);
+        $cnt = $pdo_conn ? $pdo_conn->query("SELECT FOUND_ROWS()") : false;
+        return ($cnt ? (integer) $cnt->fetchColumn() : false);
     }
 
     function mysql_affected_rows() {
         global $pdo_last_stmt;
-        return $pdo_last_stmt == null ? null : $pdo_last_stmt->rowCount();
+        return $pdo_last_stmt == null ? -1 : $pdo_last_stmt->rowCount();
     }
 
     function mysql_query($sql) {
@@ -136,6 +136,16 @@ if (!function_exists('mysql_connect')) {
         mysql_store_error(true);
         return true;
     }
+    
+    /**
+     * Only works AFTER connecting to a database
+     * @global PDO $pdo_conn
+     * @return type
+     */
+    function mysql_get_client_info (){
+        global $pdo_conn;
+        return $pdo_conn->getAttribute(PDO::ATTR_CLIENT_VERSION);
+    }
 
     /**
      * PRIVATE
@@ -145,7 +155,7 @@ if (!function_exists('mysql_connect')) {
      */
     function mysql_store_error($rst) {
         global $pdo_conn, $pdo_error;
-        $pdo_error = $rst ? array('0000', '', '') : $pdo_conn->errorInfo();
+        $pdo_error = $rst ? array('0000', '', '') : ($pdo_conn ? $pdo_conn->errorInfo() : array('9999', '?', '?'));
     }
 
 }
@@ -177,4 +187,10 @@ if (!function_exists('mysql_connect')) {
  * mysql_field_flags ( resource $result , int $field_offset )
  * mysql_field_*
  * mysql_list_processes ([ resource $link_identifier = NULL ] )
+ * 
+ * Limitations:
+ * - does not handle multiple connection (e.g. to more then 1 database)
+ * - does not implement these function [[FUNCTION LISTING]]
+ * - does not accept the $link_identifier resource on any function
+ * - requires pdo-mysql
  */
