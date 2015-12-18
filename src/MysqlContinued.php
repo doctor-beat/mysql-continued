@@ -151,30 +151,6 @@ if (!function_exists('mysql_connect')) {
 }
 
 /*
- * To test:
- * 
-
-X mysql_select_db($dbname)
-X mysql_connect()
-X mysql_set_charset('utf8')
-X mysql_affected_rows()
-X mysql_num_rows($cursor)
-X mysql_fetch_array($cursor)
-X mysql_insert_id()
-X mysql_real_escape_string($http_vars['autidSel'])
-X mysql_error()
-X mysql_query($query)
-X mysql_fetch_row() 
-
-TODO:
- * X mysql_close
- * X mysql_errno ([ resource $link_identifier = NULL ] 
- * X mysql_fetch_object ( resource $result [, string $class_name [, array $params ]] ))
- * X mysql_free_result ( resource $result )
- * X mysql_list_dbs ([ resource $link_identifier = NULL ] )
- * X mysql_num_fields ( resource $result )
- * mysql_pconnect ([ string $server = ini_get("mysql.default_host") [, string $username = ini_get("mysql.default_user") [, string $password = ini_get("mysql.default_password") [, int $client_flags = 0 ]]]] )
- * 
  * 
  * ?? mysql_get_client_info ( void )
  * ?? mysql_get_host_info ([ resource $link_identifier = NULL ] )
