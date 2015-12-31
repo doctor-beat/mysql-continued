@@ -22,16 +22,26 @@ if (!function_exists('mysql_connect')) {
     }
 
     function mysql_connect($server = null, $username = null, $password = null, $persistent = false) {
-        global $pdo_conn, $pdo_last_stmt;
+        global $pdo_conn, $pdo_last_stmt, $pdo_error;
         
         if ($server === null)   {$server = ini_get("mysql.default_host");}
         if ($username === null) {$username = ini_get("mysql.default_user");}
         if ($password === null) {$password = ini_get("mysql.default_password");}
        
-        //$pdo_conn = new PDO('sqlite:host=' . $host, $user, $pass);
-        $pdo_conn = new PDO('sqlite:foo.db', $username, $password, array(PDO::ATTR_PERSISTENT => $persistent));
-
-        mysql_store_error($pdo_conn);
+        try{
+            //$pdo_conn = new PDO('sqlite:host=' . $host, $user, $pass);
+            $pdo_conn = new PDO(sprintf('mysql:host=%s', $server), $username, $password, array(PDO::ATTR_PERSISTENT => $persistent));
+            mysql_store_error($pdo_conn);
+        }
+        catch (PDOException $e) {
+            $pdo_conn = false;
+            //grep and store the error info
+            if (preg_match ('/\\[(.*)\\]\\s*\\[(.*)\\]\\s*(.*)$/', $e->getMessage(), $matches)) {
+                $pdo_error = array($matches[1], $matches[2], $matches[3]);
+            } else {
+                $pdo_error = array('9999', '9999', 'Unknown error');
+            }
+        }
         $pdo_last_stmt = null;
         return $pdo_conn;
     }
@@ -42,14 +52,14 @@ if (!function_exists('mysql_connect')) {
 
     function mysql_select_db($dbname) {
         global $pdo_conn, $pdo_error;
-        $rst = (boolean) mysql_query(sprintf("USE %s", mysql_real_escape_string($dbname)));
+        $rst = (boolean) mysql_query(sprintf("USE `%s`", mysql_real_escape_string($dbname)));
         mysql_store_error($rst);
         return $rst;
     }
 
     function mysql_set_charset($charset) {
         global $pdo_conn, $pdo_error;
-        $rst = (boolean) mysql_query(sprintf('SET NAMES %s', mysql_real_escape_string($charset)));
+        $rst = (boolean) mysql_query(sprintf('SET NAMES `%s`', mysql_real_escape_string($charset)));
         mysql_store_error($rst);
         return $rst;
     }
@@ -65,7 +75,7 @@ if (!function_exists('mysql_connect')) {
     }
     function mysql_errno() {
         global $pdo_error;
-        return (integer) $pdo_error[0];
+        return (integer) $pdo_error[1];
     }
 
     function mysql_insert_id() {
@@ -155,7 +165,7 @@ if (!function_exists('mysql_connect')) {
      */
     function mysql_store_error($rst) {
         global $pdo_conn, $pdo_error;
-        $pdo_error = $rst ? array('0000', '', '') : ($pdo_conn ? $pdo_conn->errorInfo() : array('9999', '?', '?'));
+        $pdo_error = $rst ? array('0000', '', '') : ($pdo_conn ? $pdo_conn->errorInfo() : array('9999', '9999', 'Unknown error'));
     }
 
 }

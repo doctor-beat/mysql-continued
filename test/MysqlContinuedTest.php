@@ -29,19 +29,21 @@ class MysqlContinuedTest extends PHPUnit_Framework_TestCase {
         self::$config = (object) $CONFIG;        
 
         //self::$pdo = new PDO(sprintf('sqlite:memory:host=%s;dbname=%s;charset=UTF8', self::$config->HOSTNAME, self::$config->DATABASE), 
-        self::$pdo = new PDO('sqlite:foo.db',
+        self::$pdo = new PDO(
+            sprintf('mysql:host=%s;dbname=%s', self::$config->HOSTNAME, self::$config->DATABASE),
             self::$config->USERNAME, 
             self::$config->PASSWORD,
             array(PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,));
 
         
         //create a test table
-        self::$pdo->exec(sprintf("create table %s  (id INTEGER PRIMARY KEY AUTOINCREMENT, col1 string(200));", self::$config->TABLENAME, self::$config->TABLENAME));
-        
+        self::$pdo->exec(sprintf("create table %s  (id INTEGER PRIMARY KEY AUTO_INCREMENT, col1 varchar(200));", self::$config->TABLENAME, self::$config->TABLENAME));
+        echo "\nTable created.\n";
     }
     
     public static function tearDownAfterClass() {
         self::$pdo->exec(sprintf("drop table if exists %s;", self::$config->TABLENAME));        
+        echo "\nTable dropped.\n";
     }
     
     public function setUp() {
@@ -54,6 +56,9 @@ class MysqlContinuedTest extends PHPUnit_Framework_TestCase {
         parent::tearDown();
         $this->clearTable();
         mysql_close();
+    }
+    public function testUsesMysqlDriver() {
+        $this->assertSame('mysql', $this->dbh->getAttribute(PDO::ATTR_DRIVER_NAME));
     }
     public function testCanConnect() {
         global $pdo_conn;
@@ -69,26 +74,26 @@ class MysqlContinuedTest extends PHPUnit_Framework_TestCase {
         $this->assertSame(0, mysql_errno());
         $this->assertSame('', mysql_error());
     }
-    public function testCanConnectUsingIniValues() {
+/*    public function testCanConnectUsingIniValues() {
         global $pdo_conn;
         
         ini_set("mysql.default_host", self::$config->HOSTNAME);
         ini_set("mysql.default_user", self::$config->USERNAME);
         ini_set("mysql.default_password", self::$config->PASSWORD);
         
-        $conn = mysql_connect();  /*@var $conn PDO */
+        $conn = mysql_connect();  /*@var $conn PDO *//*
         
         $this->assertNotNull($conn);
         $this->assertSame($pdo_conn, $conn);
         $this->assertSame(0, mysql_errno());
         $this->assertSame('', mysql_error());
     }
-    public function testCanDetectFailedConnect() {
+*/    public function testCanDetectFailedConnect() {
         $conn = mysql_connect(self::$config->HOSTNAME, self::$config->USERNAME, "INVALID PASSWD");
         
         $this->assertFalse($conn);
-        $this->assertSame(123, mysql_errno());
-        $this->assertSame("Invalid password", mysql_error());
+        $this->assertSame(1045, mysql_errno());
+        $this->assertStringStartsWith('Access denied for user ', mysql_error());
     }
     public function testCanConnectPersistent() {
         $conn = mysql_pconnect(self::$config->HOSTNAME, self::$config->USERNAME, self::$config->PASSWORD);  /*@var $conn PDO */
@@ -109,13 +114,14 @@ class MysqlContinuedTest extends PHPUnit_Framework_TestCase {
     }
     public function testCanSelectDb() {
         $bool = mysql_select_db(self::$config->DATABASE);
+        echo mysql_error();
         $this->assertTrue($bool);        
         $this->assertSame('', mysql_error());
     }
     public function testCanSelectDbFailed() {
         $bool = mysql_select_db("DOESNOTEXISTS");
         $this->assertFalse($bool);        
-        $this->assertSame('Does not exists', mysql_error());
+        $this->assertSame('Unknown database \'DOESNOTEXISTS\'', mysql_error());
     }
     public function testCanSetCharset() {
         $bool = mysql_set_charset('utf8');
@@ -125,22 +131,22 @@ class MysqlContinuedTest extends PHPUnit_Framework_TestCase {
     public function testCanSetCharsetFailed() {
         $bool = mysql_set_charset('nonexisting');
         $this->assertFalse($bool);        
-        $this->assertSame('unknown charset', mysql_error());
+        $this->assertSame('Unknown character set: \'nonexisting\'', mysql_error());
     }
     public function testRealEscapeData() {
         $escaped = mysql_real_escape_string("abc 'stu");
-        $this->assertSame("abc ''stu", $escaped);
+        $this->assertSame("abc \\'stu", $escaped);
     }
     public function testCanDetectError() {
-        $rst = mysql_query("select 1 from dual");
+        $rst = mysql_query("select 1 from non_existing");
         $this->assertFalse($rst);
-        $this->assertSame(0, mysql_errno());
-        $this->assertSame("no such table: dual", mysql_error());
+        $this->assertSame(1146, mysql_errno());
+        $this->assertRegExp("/Table '.*' doesn't exist/", mysql_error());
 
         $rst = mysql_query("selectx 1 from dual");
         $this->assertFalse($rst);
-        $this->assertSame(0, mysql_errno());
-        $this->assertSame('near "selectx": syntax error', mysql_error());
+        $this->assertSame(1064, mysql_errno());
+        $this->assertStringStartsWith('You have an error in your SQL syntax;', mysql_error());
     }
     public function testCanInsert() {
         $rst = mysql_query(sprintf("insert into %s values(null, 'insert')", self::$config->TABLENAME));
@@ -181,7 +187,7 @@ class MysqlContinuedTest extends PHPUnit_Framework_TestCase {
         $this->insertRowsAndSelect($rowCnt);
         
         $rst = mysql_query(sprintf("select * from %s  order by id", self::$config->TABLENAME));
-//        $this->assertEquals($rowCnt, mysql_num_rows($rst));
+        $this->assertEquals($rowCnt, mysql_num_rows($rst));
         $cnt = 0;
         while($row = mysql_fetch_assoc($rst)) {
             $this->assertTrue((integer) $row['id'] > 0);
@@ -234,7 +240,7 @@ class MysqlContinuedTest extends PHPUnit_Framework_TestCase {
     }
     public function testCanListDbs() {
         $result = mysql_list_dbs();
-        $this->assertTrue($result);
+        $this->assertTrue((boolean) $result);
         $this->assertSame(0, mysql_errno());
 
         $found = null;
@@ -300,9 +306,9 @@ class MysqlContinuedTest extends PHPUnit_Framework_TestCase {
 
     public function testCanHandleAffectedRowsError() {
         $rst = mysql_affected_rows();
-        $this->assertSame(-1, (int) $rst);
+        $this->assertSame(0, (int) $rst);
 
-        mysql_query(sprintf("insert into DOESNOTEXISTS values(null, '%s')", $testValue));
+        mysql_query("insert into DOESNOTEXISTS values(null, 'ccc')");
         $rst = mysql_affected_rows();
         $this->assertSame(-1, (int) $rst);
     }
@@ -324,12 +330,5 @@ class MysqlContinuedTest extends PHPUnit_Framework_TestCase {
             $pdo_conn->query(sprintf("delete from %s", self::$config->TABLENAME));
         }
     }
-    
-    
- /*TODO: 
-  * enable the asserts for row count
-  * 
-  */
-    
 
 }

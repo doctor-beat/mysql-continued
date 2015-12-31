@@ -9,6 +9,9 @@
     "require": {
         "ext-pdo_mysql" : "*"
     },
+    "require-dev": {
+        "phpunit/phpunit": "*"
+    },
     "autoload": {
         "files": ["src/MysqlContinued.php"]
     }
