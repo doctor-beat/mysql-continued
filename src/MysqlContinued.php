@@ -52,14 +52,14 @@ if (!function_exists('mysql_connect')) {
     }
 
     function mysql_select_db($dbname) {
-        global $pdo_conn, $pdo_error;
+        //global $pdo_conn, $pdo_error;
         $rst = (boolean) mysql_query(sprintf("USE `%s`", mysql_real_escape_string($dbname)));
         mysql_store_error($rst);
         return $rst;
     }
 
     function mysql_set_charset($charset) {
-        global $pdo_conn, $pdo_error;
+        //global $pdo_conn, $pdo_error;
         $rst = (boolean) mysql_query(sprintf('SET NAMES `%s`', mysql_real_escape_string($charset)));
         mysql_store_error($rst);
         return $rst;
@@ -68,6 +68,9 @@ if (!function_exists('mysql_connect')) {
     function mysql_real_escape_string($unescaped_string) {
         global $pdo_conn;
         return preg_replace("/'(.*)'/", '$1', $pdo_conn->quote($unescaped_string));
+    }
+    function mysql_escape_string($unescaped_string) {
+        return mysql_real_escape_string($unescaped_string);
     }
 
     function mysql_error() {
@@ -80,7 +83,7 @@ if (!function_exists('mysql_connect')) {
     }
 
     function mysql_insert_id() {
-        global $pdo_conn, $pdo_error;
+        global $pdo_conn;
         $rst = $pdo_conn ? $pdo_conn->lastInsertId() : false;
         mysql_store_error($rst);
         return $rst;
@@ -191,7 +194,6 @@ if (!function_exists('mysql_connect')) {
  * mysql_db_name ( resource $result , int $row [, mixed $field = NULL ] )
  * mysql_db_query ( string $database , string $query [, resource $link_identifier = NULL ] )
  * mysql_drop_db ( string $database_name [, resource $link_identifier = NULL ] )
- * mysql_escape_string ( string $unescaped_string )
  * mysql_fetch_field ( resource $result [, int $field_offset = 0 ] )
  * mysql_fetch_lengths ( resource $result )
  * mysql_field_flags ( resource $result , int $field_offset )
