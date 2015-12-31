@@ -24,6 +24,7 @@ if (!function_exists('mysql_connect')) {
     function mysql_connect($server = null, $username = null, $password = null, $persistent = false) {
         global $pdo_conn, $pdo_last_stmt, $pdo_error;
         
+        //this section below does not work:
         if ($server === null)   {$server = ini_get("mysql.default_host");}
         if ($username === null) {$username = ini_get("mysql.default_user");}
         if ($password === null) {$password = ini_get("mysql.default_password");}
@@ -172,7 +173,6 @@ if (!function_exists('mysql_connect')) {
 
 /*
  * 
- * ?? mysql_get_client_info ( void )
  * ?? mysql_get_host_info ([ resource $link_identifier = NULL ] )
  * ?? mysql_get_proto_info ([ resource $link_identifier = NULL ] )
  * ?? mysql_get_server_info ([ resource $link_identifier = NULL ] )
@@ -203,4 +203,5 @@ if (!function_exists('mysql_connect')) {
  * - does not implement these function [[FUNCTION LISTING]]
  * - does not accept the $link_identifier resource on any function
  * - requires pdo-mysql
+ * - does not use the default ini-values in mysql_connect()
  */
