@@ -1,7 +1,8 @@
 {
     "name": "doctorbeat/mysql-continued",
     "description": "a dropin replacement for the discontinued mysql_* functions",
-    "authors": [
+    "license": "MIT",
+	"authors": [
         {
             "name": "doctor-beat"
         }
