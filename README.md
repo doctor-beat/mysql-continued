@@ -31,3 +31,8 @@ mysql-continued has these limitations:
 - mysql-thread_id()
 
 # install
+Composer
+  composer require doctorbeat/mysql-continued
+  
+Or old-school: download and
+  require_once MysqlContinued.php;
