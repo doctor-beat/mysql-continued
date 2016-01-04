@@ -18,6 +18,7 @@ class MysqlContinuedTest extends PHPUnit_Framework_TestCase {
     private static $config;
     private $dbh;
     private static $pdo;
+    private static $dsn = 'mysql:host=%s';
 
     public static function setUpBeforeClass(){
         global $CONFIG;
@@ -26,18 +27,21 @@ class MysqlContinuedTest extends PHPUnit_Framework_TestCase {
             throw new Exception("MysqlContinued not loaded, maybe your normal mysql-lib is still enabled?");
         }
 
-        self::$config = (object) $CONFIG;        
+        self::$config = (object) $CONFIG; 
+        if (self::$config->DSN) {
+            self::$dsn = self::$config->DSN;
+        }
 
-        //self::$pdo = new PDO(sprintf('sqlite:memory:host=%s;dbname=%s;charset=UTF8', self::$config->HOSTNAME, self::$config->DATABASE), 
+        $dsn = preg_match('/^mysql:/', self::$dsn) ? self::$dsn . ';dbname=%s' : self::$dsn;
         self::$pdo = new PDO(
-            sprintf('mysql:host=%s;dbname=%s', self::$config->HOSTNAME, self::$config->DATABASE),
+            sprintf($dsn, self::$config->HOSTNAME, self::$config->DATABASE),
             self::$config->USERNAME, 
             self::$config->PASSWORD,
             array(PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,));
 
         
         //create a test table
-        self::$pdo->exec(sprintf("create table %s  (id INTEGER PRIMARY KEY AUTO_INCREMENT, col1 varchar(200));", self::$config->TABLENAME, self::$config->TABLENAME));
+        self::$pdo->exec(sprintf("create table %s  (id INTEGER PRIMARY KEY AUTOINCREMENT, col1 varchar(200));", self::$config->TABLENAME, self::$config->TABLENAME));
         echo "\nTable created.\n";
     }
     
@@ -48,7 +52,10 @@ class MysqlContinuedTest extends PHPUnit_Framework_TestCase {
     
     public function setUp() {
         parent::setUp();
-        $this->dbh = mysql_connect(self::$config->HOSTNAME, self::$config->USERNAME, self::$config->PASSWORD);
+        $this->dbh = mysql_connect(self::$config->HOSTNAME, self::$config->USERNAME, self::$config->PASSWORD, false, 0, false, self::$dsn);
+        if (! $this->dbh) {
+            throw new Exception('conn failed');
+        }
         mysql_select_db(self::$config->DATABASE);
         mysql_set_charset('utf8');
     }
@@ -66,7 +73,7 @@ class MysqlContinuedTest extends PHPUnit_Framework_TestCase {
         $this->assertNotNull($this->dbh);
         $this->assertSame($this->dbh, $pdo_conn);
         
-        $conn = mysql_connect(self::$config->HOSTNAME, self::$config->USERNAME, self::$config->PASSWORD);
+        $conn = mysql_connect(self::$config->HOSTNAME, self::$config->USERNAME, self::$config->PASSWORD, false, 0, false, self::$dsn);
         
         $this->assertNotNull($conn);
         $this->assertSame($pdo_conn, $conn);
@@ -96,9 +103,9 @@ class MysqlContinuedTest extends PHPUnit_Framework_TestCase {
         $this->assertStringStartsWith('Access denied for user ', mysql_error());
     }
     public function testCanConnectPersistent() {
-        $conn = mysql_pconnect(self::$config->HOSTNAME, self::$config->USERNAME, self::$config->PASSWORD);  /*@var $conn PDO */
+        $conn = mysql_pconnect(self::$config->HOSTNAME, self::$config->USERNAME, self::$config->PASSWORD, 0);  /*@var $conn PDO */
         
-        $this->assertNotNull($conn);
+        $this->assertTrue( (boolean) $conn);
         $this->assertSame(true, $conn->getAttribute(PDO::ATTR_PERSISTENT));
         $this->assertSame(0, mysql_errno());
         $this->assertSame('', mysql_error());
@@ -238,7 +245,36 @@ class MysqlContinuedTest extends PHPUnit_Framework_TestCase {
         $this->assertNull($stmt);
         
     }
-    public function testCanListDbs() {
+    public function testCanRunUnbufferedQuery() {
+        $stmt = $this->insertRowsAndSelect(2);
+        
+        $rst = mysql_unbuffered_query(sprintf("select * from %s", self::$config->TABLENAME));
+        $this->assertTrue((boolean) $rst);
+        
+        $row1 = mysql_fetch_object($rst);
+        $this->assertSame('Row 1', $row1->col1);
+        $row2 = mysql_fetch_object($rst);
+        $this->assertSame('Row 2', $row2->col1);
+        $row3 = mysql_fetch_object($rst);
+        $this->assertFalse($row3);
+        $this->assertSame(2, mysql_num_rows($rst));
+    }
+    public function testCanRunDbQuery() {
+        $stmt = $this->insertRowsAndSelect(2);
+        
+        $rst = mysql_db_query(self::$config->DATABASE, sprintf("select * from %s", self::$config->TABLENAME));
+        $this->assertTrue((boolean) $rst);
+        
+        $row1 = mysql_fetch_object($rst);
+        $this->assertSame('Row 1', $row1->col1);
+        $row2 = mysql_fetch_object($rst);
+        $this->assertSame('Row 2', $row2->col1);
+        $row3 = mysql_fetch_object($rst);
+        $this->assertFalse($row3);
+        $this->assertSame(2, mysql_num_rows($rst));
+    }
+    
+/*    public function testCanListDbs() {
         $result = mysql_list_dbs();
         $this->assertTrue((boolean) $result);
         $this->assertSame(0, mysql_errno());
@@ -251,7 +287,7 @@ class MysqlContinuedTest extends PHPUnit_Framework_TestCase {
         }
         $this->assertSame(self::$config->DATABASE, $found);
     }
-    public function testCanCountColumns() {
+*/    public function testCanCountColumns() {
         $stmt = $this->insertRowsAndSelect(2);
         
         $result = mysql_num_fields($stmt);
@@ -296,6 +332,22 @@ class MysqlContinuedTest extends PHPUnit_Framework_TestCase {
         $rst = mysql_get_client_info();
         $this->assertNotNull($rst);
     }
+
+    public function testCanGetHostInfo() {
+        $rst = mysql_get_host_info();
+        $this->assertStringStartsWith('MySQL host info: ', $rst);
+    }
+    public function testCanGetServerInfo() {
+        $rst = mysql_get_server_info();
+        $this->assertStringStartsWith('MySQL server version: ', $rst);
+    }
+    public function testCanGetServerStat() {
+        $rst = mysql_stat();
+        $this->assertTrue(is_array($rst));
+        $this->assertStringStartsWith('Uptime: ', $rst[0]);
+    }
+    
+    
 
     public function testCanHandleNumRowsError() {
         $result = $this->insertRowsAndSelect();

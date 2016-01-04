@@ -6,8 +6,6 @@
  * and open the template in the editor.
  */
 
-//$pdo_conn = null;
-
 
 if (!function_exists('mysql_connect')) {
     $pdo_conn = null;       /* @var $pdo_conn PDO */
@@ -21,7 +19,7 @@ if (!function_exists('mysql_connect')) {
     function mysql_continued() {
     }
 
-    function mysql_connect($server = null, $username = null, $password = null, $persistent = false) {
+    function mysql_connect($server = null, $username = null, $password = null, $new_link = false, $client_flags = 0, $persistent = false, $dsn = 'mysql:host=%s') {
         global $pdo_conn, $pdo_last_stmt, $pdo_error;
         
         //this section below does not work:
@@ -30,8 +28,7 @@ if (!function_exists('mysql_connect')) {
         if ($password === null) {$password = ini_get("mysql.default_password");}
        
         try{
-            //$pdo_conn = new PDO('sqlite:host=' . $host, $user, $pass);
-            $pdo_conn = new PDO(sprintf('mysql:host=%s', $server), $username, $password, array(PDO::ATTR_PERSISTENT => $persistent));
+            $pdo_conn = new PDO(sprintf($dsn, $server), $username, $password, array(PDO::ATTR_PERSISTENT => $persistent));
             mysql_store_error($pdo_conn);
         }
         catch (PDOException $e) {
@@ -47,8 +44,9 @@ if (!function_exists('mysql_connect')) {
         return $pdo_conn;
     }
 
-    function mysql_pconnect($server = null, $username = null, $password = null) {
-        return mysql_connect($server, $username, $password, true);
+    //clients_flags is ignored!
+    function mysql_pconnect($server = null, $username = null, $password = null, $client_flags = 0) {
+        return mysql_connect($server, $username, $password, false, $client_flags, true);
     }
 
     function mysql_select_db($dbname) {
@@ -89,7 +87,7 @@ if (!function_exists('mysql_connect')) {
         return $rst;
     }
 
-    function mysql_num_rows(PDOStatement $stmt) {
+    function mysql_num_rows($stmt) {
         global $pdo_conn;
         $cnt = $pdo_conn ? $pdo_conn->query("SELECT FOUND_ROWS()") : false;
         return ($cnt ? (integer) $cnt->fetchColumn() : false);
@@ -100,14 +98,26 @@ if (!function_exists('mysql_connect')) {
         return $pdo_last_stmt == null ? -1 : $pdo_last_stmt->rowCount();
     }
 
-    function mysql_query($sql) {
-        global $pdo_conn, $pdo_error, $pdo_last_stmt;
-        $rst = $pdo_conn->query($sql);
+    function mysql_query($sql, $buffered = true) {
+        global $pdo_conn, $pdo_last_stmt;
+        $opts = ($pdo_conn->getAttribute(PDO::ATTR_DRIVER_NAME) == 'mysql') ? array(PDO::MYSQL_ATTR_USE_BUFFERED_QUERY => $buffered) : array();
+        $rst = $pdo_conn->prepare($sql, $opts);
+        if ($rst) {
+            $rst->execute();
+        }
         mysql_store_error($rst);
         $pdo_last_stmt = $rst;      //store the last stmt for use in affected rows
         return $rst;
     }
-
+    function mysql_unbuffered_query($sql) {
+        return mysql_query($sql, false);
+    }
+    function mysql_db_query($database, $sql) {
+        $suc = mysql_select_db($database);
+        if (! $suc) {return false;}
+        return mysql_query($sql, false);
+    }
+    
     function mysql_fetch_assoc($rs) {
         return $rs->fetch(PDO::FETCH_ASSOC);
     }
@@ -130,16 +140,25 @@ if (!function_exists('mysql_connect')) {
     function mysql_fetch_object($rs, $class_name = "stdClass", $params = array()) {
         return $rs->fetchObject($class_name, $params);
     }
+    /* keeping track of the cursor is difficult using pdo: thus not supported 
+    function mysql_result($rs, $row , $field = 0) {
+        $all = $rs->fetchAll(PDO::FETCH_BOTH);
+        try{
+            return $all[$row][$field];
+        } catch (Exception $ex) {
+            return false;
+        }
+    }*/
     
     function mysql_free_result(&$rs) {
         $rs = null;
         return true;
     }
     
-    function mysql_list_dbs () {
+/*    function mysql_list_dbs () {
         return mysql_query("SHOW DATABASES");
     }
-    
+*/    
     function mysql_num_fields ($result ){
         return $result->columnCount();
     }
@@ -160,7 +179,19 @@ if (!function_exists('mysql_connect')) {
         global $pdo_conn;
         return $pdo_conn->getAttribute(PDO::ATTR_CLIENT_VERSION);
     }
-
+    function mysql_get_host_info (){
+        global $pdo_conn;
+        return $pdo_conn->getAttribute(PDO::ATTR_CONNECTION_STATUS);
+    }
+    function mysql_get_server_info (){
+        global $pdo_conn;
+        return $pdo_conn->getAttribute(PDO::ATTR_SERVER_VERSION);
+    }
+    function mysql_stat(){
+        global $pdo_conn;
+        return $pdo_conn->getAttribute(PDO::ATTR_SERVER_INFO);
+    }
+    
     /**
      * PRIVATE
      * @global PDO $pdo_conn
@@ -176,18 +207,14 @@ if (!function_exists('mysql_connect')) {
 
 /*
  * 
- * ?? mysql_get_host_info ([ resource $link_identifier = NULL ] )
- * ?? mysql_get_proto_info ([ resource $link_identifier = NULL ] )
- * ?? mysql_get_server_info ([ resource $link_identifier = NULL ] )
- * ?? mysql_info ([ resource $link_identifier = NULL ] )
- * ?? mysql_list_fields ( string $database_name , string $table_name [, resource $link_identifier = NULL ] )
  * ?? mysql_ping ([ resource $link_identifier = NULL ] )
  * ?? mysql_result ( resource $result , int $row [, mixed $field = 0 ] )
- * ?? mysql_stat ([ resource $link_identifier = NULL ] )
  * ?? mysql_tablename ( resource $result , int $i )
- * ?? mysql_unbuffered_query ( string $query [, resource $link_identifier = NULL ] )
  * 
  * WILL NOT DO:
+ * ?? mysql_list_fields ( string $database_name , string $table_name [, resource $link_identifier = NULL ] )
+ * ?? mysql_info ([ resource $link_identifier = NULL ] )
+     * ?? mysql_get_proto_info ([ resource $link_identifier = NULL ] )
  * mysql_client_encoding
  * bool mysql_create_db ( string $database_name [, resource $link_identifier = NULL ] )
  * mysql_data_seek ( resource $result , int $row_number )
@@ -199,6 +226,8 @@ if (!function_exists('mysql_connect')) {
  * mysql_field_flags ( resource $result , int $field_offset )
  * mysql_field_*
  * mysql_list_processes ([ resource $link_identifier = NULL ] )
+ * mysql_thread_id() 
+ * mysql_list_*
  * 
  * Limitations:
  * - does not handle multiple connection (e.g. to more then 1 database)
