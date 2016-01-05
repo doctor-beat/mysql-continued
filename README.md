@@ -11,6 +11,9 @@ mysql-continued has these limitations:
 - it ignores the default ini-connect-values in mysql_connect();
 - mysql_connect ignores the $new_link and $client_flags parameters
 
+## conflicts
+The code creates a global variable '$mysc_obj' that could conflict with your existing code.
+
 ## dependencies
 - pdo_mysql 
 
@@ -29,6 +32,7 @@ mysql-continued has these limitations:
 - mysql_fields_*
 - mysql_list_processes()
 - mysql_thread_id()
+- mysql_stat()
 
 ## install
 Composer
