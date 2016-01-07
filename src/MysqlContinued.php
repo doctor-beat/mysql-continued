@@ -28,17 +28,15 @@ if (!function_exists('mysql_connect')) {
         $mysc_obj->conn = null;
         $mysc_obj->last_stmt = null;
         
-        try{
-            $mysc_obj->conn = new PDO(sprintf($dsn, $server), $username, $password, array(PDO::ATTR_PERSISTENT => $persistent));
-        }
-        catch (PDOException $e) {
-            //grep and store the error info
-            $matches = array();
-            if (preg_match ('/\\[(.*)\\]\\s*\\[(.*)\\]\\s*(.*)$/', $e->getMessage(), $matches)) {
-                array_shift($matches);  //remove the first element containing the full match
-                $errorInfo = $matches;
-            }
-        }
+        $mysc_obj->conn = new PDO(sprintf($dsn, $server), $username, $password, array(PDO::ATTR_PERSISTENT => $persistent));
+        #catch (PDOException $e) {
+        #    //grep and store the error info
+        #    $matches = array();
+        #    if (preg_match ('/\\[(.*)\\]\\s*\\[(.*)\\]\\s*(.*)$/', $e->getMessage(), $matches)) {
+        #        array_shift($matches);  //remove the first element containing the full match
+        #        $errorInfo = $matches;
+        #    }
+        #}
         
         mysql_store_error($errorInfo);
         return $mysc_obj->conn ? $mysc_obj->conn : false;

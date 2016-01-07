@@ -94,12 +94,13 @@ class MysqlContinuedTest extends PHPUnit_Framework_TestCase {
         $this->assertSame(0, mysql_errno());
         $this->assertSame('', mysql_error());
     }
-*/    public function testCanDetectFailedConnect() {
+         *
+*/   
+    /**
+     * @expectedException PDOException
+     */
+    public function testCanDetectFailedConnect() {
         $conn = mysql_connect(self::$config->HOSTNAME, self::$config->USERNAME, "INVALID PASSWD");
-        
-        $this->assertFalse($conn);
-        $this->assertSame(1045, mysql_errno());
-        $this->assertStringStartsWith('Access denied for user ', mysql_error());
     }
     public function testCanConnectPersistent() {
         $conn = mysql_pconnect(self::$config->HOSTNAME, self::$config->USERNAME, self::$config->PASSWORD, 0);  /*@var $conn PDO */
