@@ -59,10 +59,22 @@ if (!function_exists('mysql_connect')) {
 
     function mysql_real_escape_string($unescaped_string) {
         global $mysc_obj;
-        return preg_replace("/'(.*)'/", '$1', $mysc_obj->conn->quote($unescaped_string));
+        //if we have a db-connection use that to escape the string, else fallback to insecure mysql-escape()
+        return
+            $mysc_obj->conn != null ? 
+            preg_replace("/'(.*)'/", '$1', $mysc_obj->conn->quote($unescaped_string)) :
+            mysql_escape_string($unescaped_string)
+            ;
     }
+    
+    /**
+     * This method is insecure on multibyte encoding connections and should be avoided!
+     */
     function mysql_escape_string($unescaped_string) {
-        return mysql_real_escape_string($unescaped_string);
+        $search = array("\\",  "\x00", "\n",  "\r",  "'",  '"', "\x1a");
+        $replace = array("\\\\","\\0","\\n", "\\r", "\'", '\"', "\\Z");
+
+        return str_replace($search, $replace, $unescaped_string);
     }
 
     function mysql_error() {

@@ -146,6 +146,16 @@ class MysqlContinuedTest extends PHPUnit_Framework_TestCase {
         $escaped = mysql_real_escape_string("abc 'stu");
         $this->assertSame("abc \\'stu", $escaped);
     }
+    public function testRealEscapeDataDisconnected() {
+        mysql_close();
+        $escaped = mysql_real_escape_string("abc 'stu");
+        $this->assertSame("abc \\'stu", $escaped);
+    }
+    public function testEscapeData() {
+        mysql_close();
+        $escaped = mysql_escape_string("abc 'stu");
+        $this->assertSame("abc \\'stu", $escaped);
+    }
     public function testCanDetectErrorInExecute() {
         $rst = mysql_query("select 1 from non_existing");
         $this->assertFalse($rst);
