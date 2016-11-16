@@ -1,6 +1,6 @@
 {
     "name": "doctorbeat/mysql-continued",
-    "description": "a dropin replacement for the discontinued mysql_* functions",
+    "description": "A dropin replacement for the removed mysql_* functions in php7. Backward compatibility for deprecated mysql functions. ",
     "license": "MIT",
 	"authors": [
         {
