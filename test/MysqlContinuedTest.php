@@ -18,7 +18,7 @@ class MysqlContinuedTest extends PHPUnit_Framework_TestCase {
     private $dbh;
     private static $pdo;
     private static $dsn = 'mysql:host=%s';
-
+    
     public static function setUpBeforeClass(){
         global $CONFIG;
 
@@ -175,7 +175,7 @@ class MysqlContinuedTest extends PHPUnit_Framework_TestCase {
         $this->assertSame(1, mysql_affected_rows());
     }
     public function testCanUpdate() {
-        $this->insertRowsAndSelect(4);
+        $this->insertRowsAndSelect(4, false);
         $lastId = mysql_insert_id();
         
         $rst2 = mysql_query(sprintf("update %s set col1 = 'my Value' where id  = %s", self::$config->TABLENAME, $lastId));
@@ -298,13 +298,15 @@ class MysqlContinuedTest extends PHPUnit_Framework_TestCase {
         
     }
     public function testCanReturnLastId() {
-        $this->insertRowsAndSelect();
+        $this->insertRowsAndSelect(1, false);
 
         $lastId = mysql_insert_id();
+        echo "\nlast: $lastId\n";
         $this->assertNotNull($lastId);
+        
         $this->assertTrue($lastId>=1);
 
-        $this->insertRowsAndSelect();
+        $this->insertRowsAndSelect(1, false);
         $lastId2 = mysql_insert_id();
         $this->assertTrue($lastId < $lastId2);
     }
@@ -335,7 +337,7 @@ class MysqlContinuedTest extends PHPUnit_Framework_TestCase {
     public function testCanGetClientInfo() {
         $rst = mysql_get_client_info();
         $this->assertNotNull($rst);
-        $this->assertRegExp('/^\\d+\\./', $rst);
+        $this->assertRegExp('/^(mysqlnd )?\\d+\\./', $rst);
     }
 
     public function testCanGetHostInfo() {
@@ -370,11 +372,12 @@ class MysqlContinuedTest extends PHPUnit_Framework_TestCase {
      * @param int $cnt
      * @return PDOStatement
      */
-    private function insertRowsAndSelect($cnt = 1) {
+    private function insertRowsAndSelect($cnt = 1, $return = true) {
         for ($i = 0; $i < $cnt; $i++) {
             $rst = mysql_query(sprintf("insert into %s values(null, 'Row %s')", self::$config->TABLENAME, $i+1));
         }
-        return mysql_query(sprintf("select * from %s", self::$config->TABLENAME));
+        //if we run a second sql stat the last-insertId is lost...
+        return $return ? mysql_query(sprintf("select * from %s", self::$config->TABLENAME)) : true;
     }
     private function clearTable() {
         global $mysc_obj;

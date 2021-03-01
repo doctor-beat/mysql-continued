@@ -79,6 +79,8 @@ if (!function_exists('mysql_connect')) {
 
     function mysql_error() {
         global $mysc_obj;
+        var_dump($mysc_obj->error);
+        
         return $mysc_obj->error[2] === null ? '' : $mysc_obj->error[2];
     }
     function mysql_errno() {
@@ -212,10 +214,10 @@ if (!function_exists('mysql_connect')) {
         global $mysc_obj;
         $mysc_obj->error = 
             ($rst === true) ?   array('0000', 0, '') : 
-            is_array($rst) ?    $rst : 
+            (is_array($rst) ?    $rst : 
             ($rst ?             $rst->errorInfo() : 
             ($mysc_obj->conn ?        $mysc_obj->conn->errorInfo() : 
-                                array('9999', 9999, 'Unknown error')));
+                                array('9999', 9999, 'Unknown error'))));
     }
 
     //init globals:
