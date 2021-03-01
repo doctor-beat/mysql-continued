@@ -366,8 +366,14 @@ class MysqlContinuedTest extends PHPUnit_Framework_TestCase {
         $rst = mysql_affected_rows();
         $this->assertSame(-1, (int) $rst);
     }
-    
-    
+
+    public function testCanReturnFieldname() {
+        $cursor = $this->insertRowsAndSelect(1);
+
+        $this->assertSame('id', mysql_field_name($cursor, 0));
+        $this->assertSame('col1', mysql_field_name($cursor, 1));
+    }
+
     /**
      * @param int $cnt
      * @return PDOStatement
