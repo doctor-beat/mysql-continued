@@ -165,7 +165,11 @@ if (!function_exists('mysql_connect')) {
         $rs = null;
         return true;
     }
-    
+
+    function mysql_field_name($cursor, $i) {
+        return $cursor->getColumnMeta($i)["name"];
+    }
+        
     function mysql_num_fields ($result ){
         return $result->columnCount();
     }
